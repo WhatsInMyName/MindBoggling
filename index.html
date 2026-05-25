@@ -97,6 +97,12 @@ body::after{
 .chip{font-family:'Josefin Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:lowercase;padding:3px 8px;background:var(--surface);border:1px solid var(--border);color:var(--text);animation:chipIn .18s ease-out}
 .chip.big{border-color:var(--gold);color:var(--gold)}
 @keyframes chipIn{from{transform:scale(.75);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal{background:var(--surface);border:1px solid var(--gold);padding:24px;max-width:320px;width:100%;text-align:center}
+.modal-title{font-family:'Cinzel',serif;font-size:18px;font-weight:700;letter-spacing:.15em;color:var(--gold);margin-bottom:10px}
+.modal-body{font-size:12px;color:var(--muted);letter-spacing:.08em;line-height:1.7;margin-bottom:18px}
+.modal-row{display:flex;gap:8px}
+.modal-row .btn{flex:1;font-size:10px;padding:10px}
 #screen-results{text-align:center;overflow-y:auto}
 .results-title{font-family:'Cinzel',serif;font-size:38px;font-weight:900;letter-spacing:.12em;color:var(--gold)}
 .results-sub{font-size:10px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin:6px 0 16px}
@@ -185,6 +191,9 @@ body::after{
       <button class="btn" onclick="clearWord()">Clear</button>
       <button class="btn primary" onclick="submitWord()">Submit</button>
     </div>
+    <div class="action-row" style="margin-top:-2px">
+      <button class="btn danger" style="font-size:9px;padding:7px" onclick="requestEndGame()">End Game Early</button>
+    </div>
     <div class="found-title">Words Found</div>
     <div class="words-grid" id="words-grid"></div>
   </div>
@@ -197,6 +206,18 @@ body::after{
     <button class="btn primary mt14" onclick="backToLobby()">Play Again</button>
   </div>
 
+</div>
+
+<!-- END GAME MODAL -->
+<div class="modal-overlay hidden" id="end-modal">
+  <div class="modal">
+    <div class="modal-title" id="end-modal-title">End Game?</div>
+    <div class="modal-body" id="end-modal-body">A player wants to end the game early. Do you agree?</div>
+    <div class="modal-row">
+      <button class="btn danger" onclick="rejectEndGame()">Keep Playing</button>
+      <button class="btn primary" onclick="confirmEndGame()">End Now</button>
+    </div>
+  </div>
 </div>
 
 <!-- Firebase SDKs -->
@@ -230,12 +251,15 @@ async function loadDictionary() {
   try {
     bar.style.width = '20%';
     msg.textContent = 'Fetching dictionary\u2026';
-    const r = await fetch('./words.txt');
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    // Build URL relative to the current page to handle any subfolder deployment
+    const pageBase = window.location.href.split('/').slice(0, -1).join('/');
+    const wordsUrl = pageBase + '/words.txt';
+    const r = await fetch(wordsUrl);
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + wordsUrl);
     text = await r.text();
     bar.style.width = '60%';
   } catch {
-    msg.textContent = 'Could not load words.txt \u2014 make sure it is in your GitHub Pages repo.';
+    msg.textContent = 'Failed: ' + (typeof wordsUrl !== 'undefined' ? wordsUrl : 'unknown path');
     bar.style.background = 'var(--red)';
     return false;
   }
@@ -379,10 +403,13 @@ function listenWaiting() {
     if (!players) return;
     renderPlayers(players);
   });
-  // Listen for game start
+  // Listen for game start or premature end
   rListen('state', state => {
     if (state === 'playing') {
       rGet('game').then(gd => { if (gd) { stopListeners(); enterGame(gd); } });
+    } else if (state === 'done' && !gameOver) {
+      // Another player triggered end — finalise this player too
+      endGame();
     }
   });
 }
@@ -430,7 +457,111 @@ async function leaveRoom() {
 
 // ── GAME START ───────────────────────────────────────────────────────────────
 function rollBoard() {
-  return [...DICE].sort(() => Math.random() - .5).map(d => d[Math.floor(Math.random() * 6)]);
+  // Smart board generation based on analysis of high-scoring Boggle boards.
+  // Rules derived from 20 sample boards:
+  //   - 5-7 vowels total (target 6), never clumped
+  //   - Centre tiles (5,6,9,10) get highest-connectivity letters (E,R,T,S,A,O)
+  //   - Rare letters (J,X,Z,Q,V,K,B) go to corners only, max 1-2 per board
+  //   - Letter pool weighted by actual frequency: E×3, S×3, T×2, O×2, A×2, R×2 as backbone
+  //   - Must include at least one liquid (L/R), nasal (M/N), sibilant (S), stop (T/D)
+
+  const VOWELS = new Set(['A','E','I','O','U']);
+
+  // Weighted letter pool — mirrors real Boggle frequency, tuned to sample boards
+  const POOL = [
+    'E','E','E','E',        // highest freq in every sample board
+    'S','S','S',            // 2nd highest
+    'T','T','T',            // 3rd
+    'O','O','O',            // 4th
+    'A','A','A',            // 5th
+    'R','R','R',            // 6th
+    'I','I',                // vowel support
+    'L','L',                // liquid
+    'N','N',                // nasal
+    'H','H',                // digraph enabler (TH, SH, WH)
+    'M','M',
+    'D','D',
+    'W','W',
+    'Y','Y',                // -LY, -RY endings
+    'U','U',                // vowel support
+    'P',
+    'G',
+    'C',
+    'F',
+    'B',
+    'K',
+    'V',
+    'J',                    // rare — corner only
+    'X',                    // rare — corner only
+    'Z',                    // rare — corner only
+  ];
+
+  const RARE = new Set(['J','X','Z','Q','V','K','B']);
+  // Positions: corners=0,3,12,15  edges=1,2,4,7,8,11,13,14  centres=5,6,9,10
+  const CORNERS = [0,3,12,15];
+  const EDGES   = [1,2,4,7,8,11,13,14];
+  const CENTRES = [5,6,9,10];
+
+  function pick(pool) {
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i+1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  let attempts = 0;
+  while (attempts++ < 200) {
+    const board = new Array(16).fill(null);
+
+    // Step 1: fill centres with high-value connectors (vowel-consonant mix)
+    const centrePool = ['E','E','E','R','R','T','T','S','S','A','O','I','L','N'];
+    const centreLetters = shuffle([...centrePool]).slice(0, 4);
+    CENTRES.forEach((pos, i) => board[pos] = centreLetters[i]);
+
+    // Step 2: fill edges, biased toward common letters, some vowels
+    const edgePool = ['E','E','S','S','T','T','A','A','O','O','R','R','I','L','L','N','H','H','M','D','W','Y','U','G','P','C','F'];
+    const edgeLetters = [];
+    while (edgeLetters.length < 8) edgeLetters.push(pick(edgePool));
+    EDGES.forEach((pos, i) => board[pos] = edgeLetters[i]);
+
+    // Step 3: fill corners — allow rare letters here, otherwise common
+    const cornerPool = ['E','S','T','O','A','R','M','W','H','D','N','Y','J','X','Z','V','K','B','F','P'];
+    const cornerLetters = [];
+    while (cornerLetters.length < 4) cornerLetters.push(pick(cornerPool));
+    CORNERS.forEach((pos, i) => board[pos] = cornerLetters[i]);
+
+    // ── Validate the board ──────────────────────────────────────────────────
+    const vowelCount  = board.filter(l => VOWELS.has(l)).length;
+    const rareCount   = board.filter(l => RARE.has(l)).length;
+    const hasLiquid   = board.some(l => l === 'L' || l === 'R');
+    const hasNasal    = board.some(l => l === 'M' || l === 'N');
+    const hasSibilant = board.some(l => l === 'S');
+    const hasStop     = board.some(l => l === 'T' || l === 'D');
+    const hasE        = board.some(l => l === 'E');
+    // No rare letters outside corners
+    const rareOnlyInCorners = board.every((l, i) => !RARE.has(l) || CORNERS.includes(i));
+    // Vowels not all in one quadrant — check both halves have vowels
+    const topVowels = [0,1,2,3,4,5,6,7].filter(i => VOWELS.has(board[i])).length;
+    const botVowels = [8,9,10,11,12,13,14,15].filter(i => VOWELS.has(board[i])).length;
+
+    if (
+      vowelCount >= 5 && vowelCount <= 7 &&
+      rareCount <= 2 &&
+      rareOnlyInCorners &&
+      hasLiquid && hasNasal && hasSibilant && hasStop && hasE &&
+      topVowels >= 2 && botVowels >= 2
+    ) {
+      return board;
+    }
+  }
+
+  // Fallback: guaranteed-valid hand-crafted board
+  return ['S','T','A','R','E','R','I','N','D','A','T','E','L','O','S','E'];
 }
 
 async function startGame() {
@@ -450,6 +581,7 @@ function enterGame(gd) {
   updateWordsGrid();
   startTimer(gd);
   listenScores(gd);
+  listenForEndRequests();
 }
 
 // ── TIMER ────────────────────────────────────────────────────────────────────
@@ -563,7 +695,8 @@ function clearFb() { const el = document.getElementById('feedback'); el.textCont
 // ── SCORING ──────────────────────────────────────────────────────────────────
 function scoreWord(w) {
   const l = w.length;
-  if (l < 5)   return 0;
+  if (l < 4)   return 0;
+  if (l === 4) return 1;
   if (l === 5) return 2;
   if (l === 6) return 3;
   if (l === 7) return 5;
@@ -572,7 +705,11 @@ function scoreWord(w) {
 
 // ── VALIDITY ─────────────────────────────────────────────────────────────────
 function isTrivialPlural(w) {
-  return w.length === 5 && w.endsWith('s') && DICT.has(w.slice(0, 4));
+  // Block 4-letter word = 3-letter word + S
+  if (w.length === 4 && w.endsWith('s') && DICT.has(w.slice(0, 3))) return true;
+  // Block 5-letter word = 4-letter word + S
+  if (w.length === 5 && w.endsWith('s') && DICT.has(w.slice(0, 4))) return true;
+  return false;
 }
 function onBoard(word) {
   const upper = word.toUpperCase().replace(/QU/g, 'Qu');
@@ -602,7 +739,7 @@ async function submitWord() {
   const raw = document.getElementById('word-typed').value.trim().toUpperCase();
   const w   = raw.toLowerCase();
   const fb  = document.getElementById('feedback');
-  if (w.length < 5)                                    { fb.textContent = 'Minimum 5 letters';              fb.className = 'feedback err'; return; }
+  if (w.length < 4)                                    { fb.textContent = 'Minimum 4 letters';              fb.className = 'feedback err'; return; }
   if (words.find(x => x.toLowerCase() === w))          { fb.textContent = 'Already found';                  fb.className = 'feedback err'; clearWord(); return; }
   if (!DICT.has(w))                                    { fb.textContent = 'Not in dictionary';              fb.className = 'feedback err'; clearWord(); return; }
   if (isTrivialPlural(w))                              { fb.textContent = 'Trivial plural \u2014 invalid';  fb.className = 'feedback err'; clearWord(); return; }
@@ -637,15 +774,89 @@ function updateWordsGrid() {
 }
 
 // ── END GAME ─────────────────────────────────────────────────────────────────
+let endRequested = false;
+let endApprovalListener = null;
+
+function requestEndGame() {
+  if (gameOver) return;
+  if (isHost) {
+    // Host sees their own confirm dialog
+    showModal(
+      'End Game?',
+      'Are you sure you want to end the game early for all players?',
+      confirmEndGame, rejectEndGame
+    );
+  } else {
+    // Non-host: write request to Firebase, host gets prompted
+    rSet('endRequest', { from: myName, ts: Date.now() });
+    showModal(
+      'Request Sent',
+      'You’ve asked the host to end the game. Waiting for their response…',
+      null, cancelEndRequest
+    );
+    // Listen for host decision
+    endApprovalListener = rRef('endRequest');
+    import('https://www.gstatic.com/firebasejs/11.0.0/firebase-database.js').then(({ onValue, off }) => {
+      onValue(endApprovalListener, snap => {
+        const val = snap.val();
+        if (!val) {
+          // Host cleared it — either approved (game ended) or rejected
+          hideModal();
+          off(endApprovalListener);
+        }
+      });
+    });
+  }
+}
+
+function cancelEndRequest() {
+  rDel('endRequest');
+  hideModal();
+}
+
+function listenForEndRequests() {
+  if (!isHost) return;
+  rListen('endRequest', val => {
+    if (!val || gameOver) return;
+    showModal(
+      'End Game Request',
+      val.from + ' wants to end the game early. Do you agree?',
+      async () => { await rDel('endRequest'); confirmEndGame(); },
+      async () => { await rDel('endRequest'); hideModal(); }
+    );
+  });
+}
+
+function showModal(title, body, onConfirm, onReject) {
+  document.getElementById('end-modal-title').textContent = title;
+  document.getElementById('end-modal-body').textContent  = body;
+  const [rejectBtn, confirmBtn] = document.getElementById('end-modal').querySelectorAll('.btn');
+  // Only show buttons if handlers provided
+  rejectBtn.style.display  = onReject  ? '' : 'none';
+  confirmBtn.style.display = onConfirm ? '' : 'none';
+  rejectBtn.onclick  = onReject  || null;
+  confirmBtn.onclick = onConfirm || null;
+  document.getElementById('end-modal').classList.remove('hidden');
+}
+
+function hideModal() {
+  document.getElementById('end-modal').classList.add('hidden');
+}
+
+function rejectEndGame() { hideModal(); }
+
+async function confirmEndGame() {
+  hideModal();
+  await endGame();
+}
+
 async function endGame() {
   if (gameOver) return;
   gameOver = true;
   clearInterval(timerIv);
   stopListeners();
-  // Write final state
   await rUpdate('players/' + myId, { score, words: words.join(','), done: true });
-  if (isHost) await rSet('state', 'done');
-  // Wait a moment for all players to write their final words
+  await rSet('state', 'done');
   setTimeout(showResults, 2500);
 }
 
@@ -703,16 +914,20 @@ async function backToLobby() {
   setTimeout(() => document.getElementById('inp-name')?.focus(), 100);
 
   // Expose functions to global scope for onclick handlers
-  window.createRoom  = createRoom;
-  window.joinRoom    = joinRoom;
-  window.copyLink    = copyLink;
-  window.leaveRoom   = leaveRoom;
-  window.startGame   = startGame;
-  window.submitWord  = submitWord;
-  window.clearWord   = clearWord;
-  window.backToLobby = backToLobby;
-  window.onTypedInput = onTypedInput;
-  window.onTypedKey   = onTypedKey;
+  window.createRoom     = createRoom;
+  window.joinRoom       = joinRoom;
+  window.copyLink       = copyLink;
+  window.leaveRoom      = leaveRoom;
+  window.startGame      = startGame;
+  window.submitWord     = submitWord;
+  window.clearWord      = clearWord;
+  window.backToLobby    = backToLobby;
+  window.onTypedInput   = onTypedInput;
+  window.onTypedKey     = onTypedKey;
+  window.requestEndGame = requestEndGame;
+  window.confirmEndGame = confirmEndGame;
+  window.rejectEndGame  = rejectEndGame;
+  window.cancelEndRequest = cancelEndRequest;
 })();
 </script>
 </body>
