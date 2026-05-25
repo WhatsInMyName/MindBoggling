@@ -167,6 +167,11 @@ body::after{
       <div id="players-list"></div>
     </div>
     <div class="status-note" id="wait-status">Waiting for players&hellip;</div>
+    <div id="duration-row" style="display:none;flex-direction:column;gap:5px;margin-top:14px;text-align:left">
+      <div class="field-label">Game Duration (minutes)</div>
+      <input class="field-input" id="inp-duration" type="number" min="1" max="59" value="10"
+        style="font-size:20px;letter-spacing:.1em;text-align:center;width:100%"/>
+    </div>
     <button class="btn primary mt14" id="btn-start" onclick="startGame()" style="display:none">Start Game</button>
     <button class="btn danger mt8" onclick="leaveRoom()">Leave</button>
   </div>
@@ -194,7 +199,10 @@ body::after{
     <div class="action-row" style="margin-top:-2px">
       <button class="btn danger" style="font-size:9px;padding:7px" onclick="requestEndGame()">End Game Early</button>
     </div>
-    <div class="found-title">Words Found</div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0">
+      <div class="found-title">Words Found</div>
+      <button class="btn danger" style="width:auto;font-size:8px;padding:4px 10px;border-width:1px" onclick="leaveGame()">Leave</button>
+    </div>
     <div class="words-grid" id="words-grid"></div>
   </div>
 
@@ -242,6 +250,7 @@ const db  = getDatabase(app);
 
 // ── DICTIONARY ───────────────────────────────────────────────────────────────
 let DICT = new Set();
+let VERB_SET = new Set(); // words that are verb forms
 
 async function loadDictionary() {
   const bar = document.getElementById('load-bar');
@@ -265,13 +274,20 @@ async function loadDictionary() {
   }
   msg.textContent = 'Parsing\u2026';
   bar.style.width = '85%';
-  // CSW21 format: entries start with an uppercase word, definitions may wrap to next lines.
-  // Only grab lines that start with an uppercase letter — those are word entries.
+  // CSW21 format: entries start with an uppercase word.
+  // Verb entries contain [v] or =v> on their definition line.
+  // We build both DICT (all valid words) and VERB_SET (verb forms).
   for (const line of text.split('\n')) {
     const first = line[0];
     if (!first || first === '#' || first !== first.toUpperCase() || first === first.toLowerCase()) continue;
     const w = line.split(' ')[0].toLowerCase();
-    if (w.length >= 4 && /^[a-z]+$/.test(w)) DICT.add(w);
+    if (w.length >= 4 && /^[a-z]+$/.test(w)) {
+      DICT.add(w);
+      // Mark as verb if line contains verb POS markers
+      if (line.includes('[v]') || line.includes('=v>') || line.includes('[v ')) {
+        VERB_SET.add(w);
+      }
+    }
   }
   bar.style.width = '100%';
   msg.textContent = DICT.size.toLocaleString() + ' words loaded (' + source + ')';
@@ -293,7 +309,6 @@ let board=[], selected=[], typedMode=false;
 let words=[], score=0, gameOver=false;
 let timerIv=null, scoreIv=null;
 let roomRef=null, unsubscribes=[];
-const DURATION = 600; // 10 minutes
 
 // ── UTILS ────────────────────────────────────────────────────────────────────
 const sleep  = ms => new Promise(r => setTimeout(r, ms));
@@ -426,8 +441,10 @@ function renderPlayers(players) {
   if (isHost) {
     btn.style.display = 'block';
     btn.textContent = entries.length === 1 ? 'Start (solo)' : `Start \u00B7 ${entries.length} Players`;
+    document.getElementById('duration-row').style.display = 'flex';
   } else {
     btn.style.display = 'none';
+    document.getElementById('duration-row').style.display = 'none';
   }
   document.getElementById('wait-status').textContent = isHost
     ? 'Share the link above, then press Start when ready.'
@@ -566,7 +583,12 @@ function rollBoard() {
 
 async function startGame() {
   board = rollBoard();
-  const gd = { board, startTime: Date.now(), duration: DURATION };
+  const inp = document.getElementById('inp-duration');
+  let mins = parseInt(inp ? inp.value : 10, 10);
+  if (isNaN(mins) || mins < 1) mins = 1;
+  if (mins > 59) mins = 59;
+  const chosenDuration = mins * 60;
+  const gd = { board, startTime: Date.now(), duration: chosenDuration };
   await rUpdate('', { state: 'playing', game: gd });
   stopListeners();
   enterGame(gd);
@@ -630,6 +652,9 @@ function renderBoard() {
 
 // ── DRAG ─────────────────────────────────────────────────────────────────────
 let dragging = false;
+let ptrMoved = false;
+let ptrDownIdx = null;
+
 function tileAt(x, y) {
   const el = document.elementFromPoint(x, y);
   if (!el) return null;
@@ -639,16 +664,39 @@ function tileAt(x, y) {
 function onPtrDown(e) {
   e.preventDefault();
   const idx = tileAt(e.clientX, e.clientY); if (idx == null) return;
-  dragging = true; typedMode = false;
-  document.getElementById('word-typed').value = '';
-  clearSel(); selectTile(idx);
+  dragging = true; ptrMoved = false; ptrDownIdx = idx;
+  // If switching from typed mode, clear everything and start fresh
+  if (typedMode) {
+    typedMode = false;
+    document.getElementById('word-typed').value = '';
+    clearSel();
+  }
   document.getElementById('board').setPointerCapture(e.pointerId);
 }
 function onPtrMove(e) {
   if (!dragging) return; e.preventDefault();
-  const idx = tileAt(e.clientX, e.clientY); if (idx != null) selectTile(idx);
+  const idx = tileAt(e.clientX, e.clientY); if (idx == null) return;
+  if (!ptrMoved && idx !== ptrDownIdx) {
+    // First real movement — start a drag from the original tile
+    ptrMoved = true;
+    // Only clear and restart if not already in a chained-tap session
+    if (selected.length === 0) { clearSel(); selectTile(ptrDownIdx); }
+  }
+  if (ptrMoved) selectTile(idx);
 }
-function onPtrUp() { dragging = false; }
+function onPtrUp(e) {
+  if (!ptrMoved && ptrDownIdx != null) {
+    // Pure tap — additive: add tile to existing selection
+    // But if tile is the last selected (double-tap), treat as backtrack
+    if (selected.length === 0) {
+      // First tap — start fresh word
+      clearSel();
+    }
+    selectTile(ptrDownIdx);
+    buildWord();
+  }
+  dragging = false; ptrMoved = false; ptrDownIdx = null;
+}
 
 function selectTile(idx) {
   if (gameOver) return;
@@ -705,10 +753,13 @@ function scoreWord(w) {
 
 // ── VALIDITY ─────────────────────────────────────────────────────────────────
 function isTrivialPlural(w) {
-  // Block 4-letter word = 3-letter word + S
-  if (w.length === 4 && w.endsWith('s') && DICT.has(w.slice(0, 3))) return true;
-  // Block 5-letter word = 4-letter word + S
-  if (w.length === 5 && w.endsWith('s') && DICT.has(w.slice(0, 4))) return true;
+  if (!w.endsWith('s')) return false;
+  // If it is a verb form (e.g. AIMS, EASES, LEAVES), always accept it
+  if (VERB_SET.has(w)) return false;
+  // Block 4-letter word = 3-letter word + S (noun plural only)
+  if (w.length === 4 && DICT.has(w.slice(0, 3))) return true;
+  // Block 5-letter word = 4-letter word + S (noun plural only)
+  if (w.length === 5 && DICT.has(w.slice(0, 4))) return true;
   return false;
 }
 function onBoard(word) {
@@ -741,6 +792,17 @@ async function submitWord() {
   const fb  = document.getElementById('feedback');
   if (w.length < 4)                                    { fb.textContent = 'Minimum 4 letters';              fb.className = 'feedback err'; return; }
   if (words.find(x => x.toLowerCase() === w))          { fb.textContent = 'Already found';                  fb.className = 'feedback err'; clearWord(); return; }
+  // Singular/plural cross-check
+  const singularOf = w.endsWith('s') ? w.slice(0, -1) : null;
+  const pluralOf   = w + 's';
+  if (singularOf && words.find(x => x.toLowerCase() === singularOf)) {
+    fb.textContent = '\u201C' + singularOf.toUpperCase() + '\u201D already found \u2014 singular scores';
+    fb.className = 'feedback err'; clearWord(); return;
+  }
+  if (words.find(x => x.toLowerCase() === pluralOf)) {
+    fb.textContent = '\u201C' + pluralOf.toUpperCase() + '\u201D already found \u2014 plural scores';
+    fb.className = 'feedback err'; clearWord(); return;
+  }
   if (!DICT.has(w))                                    { fb.textContent = 'Not in dictionary';              fb.className = 'feedback err'; clearWord(); return; }
   if (isTrivialPlural(w))                              { fb.textContent = 'Trivial plural \u2014 invalid';  fb.className = 'feedback err'; clearWord(); return; }
   if (typedMode && !onBoard(raw))                      { fb.textContent = 'Cannot be traced on this board'; fb.className = 'feedback err'; clearWord(); return; }
@@ -891,10 +953,20 @@ async function showResults() {
   showScreen('results');
 }
 
+async function leaveGame() {
+  clearInterval(timerIv); clearInterval(scoreIv);
+  stopListeners();
+  // Save words so far then remove self from players
+  await rUpdate('players/' + myId, { score, words: words.join(','), done: true });
+  await rRemove('players/' + myId);
+  setRoomURL('');
+  showScreen('lobby');
+}
+
 async function backToLobby() {
   clearInterval(timerIv); clearInterval(scoreIv);
   stopListeners();
-  if (isHost) await rRemove('');   // clean up entire room
+  if (isHost) await rRemove('');
   setRoomURL('');
   showScreen('lobby');
 }
@@ -924,6 +996,7 @@ async function backToLobby() {
   window.backToLobby    = backToLobby;
   window.onTypedInput   = onTypedInput;
   window.onTypedKey     = onTypedKey;
+  window.leaveGame      = leaveGame;
   window.requestEndGame = requestEndGame;
   window.confirmEndGame = confirmEndGame;
   window.rejectEndGame  = rejectEndGame;
