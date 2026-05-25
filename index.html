@@ -754,8 +754,13 @@ function scoreWord(w) {
 // ── VALIDITY ─────────────────────────────────────────────────────────────────
 function isTrivialPlural(w) {
   if (!w.endsWith('s')) return false;
-  // If it is a verb form (e.g. AIMS, EASES, LEAVES), always accept it
+  const base = w.slice(0, -1);
+  // Accept if the word itself is marked as a verb in CSW21
   if (VERB_SET.has(w)) return false;
+  // Accept if the BASE WORD is a verb — e.g. STEW is a verb, so STEWS is valid
+  // This catches cases where CSW21 marks the derivative as [n] even though
+  // the base word is also a verb (e.g. STEWS <stew=n> [n])
+  if (VERB_SET.has(base)) return false;
   // Block 4-letter word = 3-letter word + S (noun plural only)
   if (w.length === 4 && DICT.has(w.slice(0, 3))) return true;
   // Block 5-letter word = 4-letter word + S (noun plural only)
