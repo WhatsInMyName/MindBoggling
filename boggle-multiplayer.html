@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BOGGLE</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Josefin+Sans:ital,wght@0,100;0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0d0f;--surface:#16161a;--surface2:#1e1e24;
+  --border:#2e2e38;--border2:#3d3d4d;
+  --text:#e8e4d9;--muted:#6b6878;
+  --gold:#c9a84c;--gold2:#e8c86a;
+  --red:#c0392b;--green:#2ecc71;
+  --tile-bg:#1a1a20;--tile-sel:#c9a84c;--tile-sel-text:#0d0d0f;
+}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'Josefin Sans',sans-serif;
+  background:var(--bg);color:var(--text);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:12px;
+}
+body::after{
+  content:'';position:fixed;inset:0;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events:none;z-index:0;opacity:0.5;
+}
+.wrap{position:relative;z-index:1;width:100%;max-width:440px;display:flex;flex-direction:column}
+
+/* LOGO */
+.logo{font-family:'Cinzel',serif;font-weight:900;font-size:clamp(52px,14vw,80px);letter-spacing:.18em;color:var(--gold);text-align:center;line-height:1;text-shadow:0 0 40px rgba(201,168,76,.3)}
+.logo-sub{font-family:'Josefin Sans',sans-serif;font-weight:100;font-size:10px;letter-spacing:.5em;color:var(--muted);text-align:center;margin-top:6px;text-transform:uppercase}
+
+/* LOADING */
+#screen-loading{text-align:center}
+.load-bar-wrap{width:200px;height:2px;background:var(--border);margin:24px auto 12px;overflow:hidden}
+.load-bar{height:100%;background:var(--gold);width:0%;transition:width .4s ease}
+.load-msg{font-size:11px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase}
+
+/* BUTTONS / INPUTS */
+.btn{font-family:'Josefin Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.35em;text-transform:uppercase;padding:13px 20px;border:1px solid var(--border2);background:transparent;color:var(--text);cursor:pointer;transition:all .18s;width:100%}
+.btn:hover{background:var(--surface2);border-color:var(--gold);color:var(--gold)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--bg)}
+.btn.primary:hover{background:var(--gold2);border-color:var(--gold2)}
+.btn.danger{border-color:var(--red);color:var(--red)}
+.btn.danger:hover{background:var(--red);color:#fff}
+.field-group{display:flex;flex-direction:column;gap:5px;text-align:left}
+.field-label{font-size:9px;letter-spacing:.45em;color:var(--muted);text-transform:uppercase;font-weight:600}
+.field-input{font-family:'Josefin Sans',sans-serif;font-size:15px;letter-spacing:.08em;padding:11px 14px;background:var(--surface);border:1px solid var(--border2);color:var(--text);outline:none;width:100%;transition:border-color .2s}
+.field-input:focus{border-color:var(--gold)}
+.field-input::placeholder{color:var(--muted)}
+.code-input{text-transform:uppercase;font-size:22px;letter-spacing:.35em;text-align:center}
+.sep{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:9px;letter-spacing:.4em;text-transform:uppercase}
+.sep::before,.sep::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* LOBBY */
+#screen-lobby{text-align:center}
+.lobby-form{margin-top:28px;display:flex;flex-direction:column;gap:12px}
+
+/* WAITING */
+#screen-waiting{text-align:center}
+.room-code-box{display:inline-block;margin:16px auto;border:1px solid var(--gold);padding:12px 24px;position:relative}
+.room-code-box::before{content:'ROOM CODE';position:absolute;top:-8px;left:50%;transform:translateX(-50%);background:var(--bg);padding:0 8px;font-size:8px;letter-spacing:.45em;color:var(--muted)}
+.room-code-val{font-family:'Cinzel',serif;font-size:44px;font-weight:700;letter-spacing:.25em;color:var(--gold)}
+.share-row{display:flex;gap:6px;margin:8px 0}
+.share-inp{flex:1;font-family:'Josefin Sans',sans-serif;font-size:11px;padding:9px 10px;background:var(--surface);border:1px solid var(--border);color:var(--muted);min-width:0;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.players-wrap{margin:12px 0;text-align:left}
+.players-title{font-size:9px;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;margin-bottom:8px}
+.player-row{display:flex;align-items:center;gap:10px;padding:9px 12px;background:var(--surface);border:1px solid var(--border);margin-bottom:5px;font-size:13px}
+.pdot{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.pdot.host{background:var(--gold)}
+.pname{flex:1}
+.pbadge{font-size:8px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.status-note{font-size:11px;color:var(--muted);letter-spacing:.05em;margin:6px 0}
+
+/* GAME LAYOUT */
+#screen-game{display:flex;flex-direction:column;gap:7px;height:100dvh;max-height:100dvh;padding:10px 0;overflow:hidden}
+.game-header{display:flex;justify-content:space-between;align-items:center;flex-shrink:0}
+.game-logo{font-family:'Cinzel',serif;font-weight:700;font-size:20px;letter-spacing:.2em;color:var(--gold)}
+.timer{font-family:'Cinzel',serif;font-weight:600;font-size:26px;letter-spacing:.08em;color:var(--text);transition:color .4s;min-width:68px;text-align:right}
+.timer.urgent{color:var(--red)}
+.score-strip{display:flex;gap:5px;overflow-x:auto;flex-shrink:0;padding-bottom:2px}
+.score-strip::-webkit-scrollbar{display:none}
+.score-card{flex-shrink:0;min-width:68px;padding:4px 8px;background:var(--surface);border:1px solid var(--border);text-align:center}
+.score-card.me{border-color:var(--gold);background:rgba(201,168,76,.08)}
+.sc-name{font-size:8px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase}
+.sc-val{font-family:'Cinzel',serif;font-size:20px;color:var(--text)}
+.score-card.me .sc-val{color:var(--gold)}
+
+/* BOARD */
+.board{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;user-select:none;touch-action:none;flex-shrink:0}
+.tile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'Josefin Sans',sans-serif;font-size:clamp(19px,6vw,28px);font-weight:600;letter-spacing:.05em;background:var(--tile-bg);border:1px solid var(--border2);cursor:pointer;transition:background .1s,border-color .1s,transform .08s,box-shadow .1s,color .1s;position:relative;-webkit-tap-highlight-color:transparent;text-transform:uppercase}
+.tile.selected{background:var(--tile-sel);border-color:var(--tile-sel);color:var(--tile-sel-text);transform:scale(.93);font-weight:700;box-shadow:0 0 14px rgba(201,168,76,.45)}
+.tile.path-dot::after{content:'';position:absolute;bottom:5px;right:5px;width:5px;height:5px;border-radius:50%;background:rgba(0,0,0,.35)}
+.tile .qu-note{position:absolute;bottom:3px;right:4px;font-size:.38em;letter-spacing:0;opacity:.5;font-weight:400}
+
+/* WORD BAR */
+.word-bar{flex-shrink:0;display:flex;align-items:center;gap:0;border:1px solid var(--border2);background:var(--surface);min-height:44px;padding:0 12px}
+.word-typed{flex:1;font-family:'Josefin Sans',sans-serif;font-size:20px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;background:transparent;border:none;color:var(--text);outline:none;caret-color:var(--gold);min-width:0}
+.word-typed::placeholder{color:var(--border2);font-weight:300;font-size:14px;letter-spacing:.06em}
+.word-count{font-size:10px;color:var(--muted);letter-spacing:.1em;flex-shrink:0}
+.feedback{font-size:10px;letter-spacing:.25em;text-transform:uppercase;min-height:15px;text-align:center;flex-shrink:0}
+.feedback.ok{color:var(--green)}
+.feedback.err{color:var(--red)}
+.action-row{display:flex;gap:6px;flex-shrink:0}
+.action-row .btn{flex:1;font-size:10px;padding:10px}
+
+/* WORDS FOUND */
+.found-title{font-size:8px;letter-spacing:.4em;color:var(--muted);text-transform:uppercase;flex-shrink:0}
+.words-grid{display:flex;flex-wrap:wrap;gap:4px;overflow-y:auto;flex:1;min-height:0;align-content:flex-start}
+.words-grid::-webkit-scrollbar{width:3px}
+.words-grid::-webkit-scrollbar-thumb{background:var(--border2)}
+.chip{font-family:'Josefin Sans',sans-serif;font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:lowercase;padding:3px 8px;background:var(--surface);border:1px solid var(--border);color:var(--text);animation:chipIn .18s ease-out}
+.chip.big{border-color:var(--gold);color:var(--gold)}
+@keyframes chipIn{from{transform:scale(.75);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* RESULTS */
+#screen-results{text-align:center;overflow-y:auto}
+.results-title{font-family:'Cinzel',serif;font-size:38px;font-weight:900;letter-spacing:.12em;color:var(--gold)}
+.results-sub{font-size:10px;letter-spacing:.3em;color:var(--muted);text-transform:uppercase;margin:6px 0 16px}
+.podium-row{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--border);background:var(--surface);margin-bottom:6px;text-align:left}
+.podium-row.first{border-color:var(--gold);background:rgba(201,168,76,.07)}
+.pr-rank{font-family:'Cinzel',serif;font-size:24px;color:var(--muted);width:28px;flex-shrink:0}
+.podium-row.first .pr-rank{color:var(--gold)}
+.pr-info{flex:1}
+.pr-name{font-size:14px;font-weight:600}
+.pr-words{font-size:9px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;margin-top:2px}
+.pr-score{font-family:'Cinzel',serif;font-size:30px;color:var(--text)}
+.podium-row.first .pr-score{color:var(--gold)}
+
+/* TOAST */
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-size:11px;letter-spacing:.25em;text-transform:uppercase;padding:10px 18px;z-index:999;transition:transform .22s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.hidden{display:none!important}
+.mt8{margin-top:8px}.mt14{margin-top:14px}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="wrap" id="main-wrap">
+
+  <!-- LOADING -->
+  <div id="screen-loading">
+    <div class="logo">BOGGLE</div>
+    <div class="logo-sub">Multiplayer &middot; British English</div>
+    <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
+    <div class="load-msg" id="load-msg">Loading dictionary&hellip;</div>
+  </div>
+
+  <!-- LOBBY -->
+  <div id="screen-lobby" class="hidden">
+    <div class="logo">BOGGLE</div>
+    <div class="logo-sub">Multiplayer &middot; British English</div>
+    <div class="lobby-form">
+      <div class="field-group">
+        <div class="field-label">Your Name</div>
+        <input class="field-input" id="inp-name" placeholder="Enter your name" maxlength="16" autocomplete="off"/>
+      </div>
+      <button class="btn primary" onclick="createRoom()">Create New Game</button>
+      <div class="sep">or join existing</div>
+      <div class="field-group">
+        <div class="field-label">Room Code</div>
+        <input class="field-input code-input" id="inp-code" placeholder="XXXX" maxlength="4" autocomplete="off"
+          oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"/>
+      </div>
+      <button class="btn" onclick="joinRoom()">Join Game</button>
+    </div>
+  </div>
+
+  <!-- WAITING -->
+  <div id="screen-waiting" class="hidden">
+    <div class="logo" style="font-size:34px">BOGGLE</div>
+    <div class="room-code-box"><div class="room-code-val" id="disp-code">----</div></div>
+    <div class="share-row">
+      <input class="share-inp" id="share-inp" readonly/>
+      <button class="btn" style="flex-shrink:0;width:auto;padding:9px 12px;font-size:9px" onclick="copyLink()">Copy Link</button>
+    </div>
+    <p class="status-note">Share this link &mdash; friends open it to join directly.</p>
+    <div class="players-wrap">
+      <div class="players-title">Players in Room</div>
+      <div id="players-list"></div>
+    </div>
+    <div class="status-note" id="wait-status">Waiting for players&hellip;</div>
+    <button class="btn primary mt14" id="btn-start" onclick="startGame()" style="display:none">Start Game</button>
+    <button class="btn danger mt8" onclick="leaveRoom()">Leave</button>
+  </div>
+
+  <!-- GAME -->
+  <div id="screen-game" class="hidden">
+    <div class="game-header">
+      <div class="game-logo">BOGGLE</div>
+      <div class="timer" id="timer">10:00</div>
+    </div>
+    <div class="score-strip" id="score-strip"></div>
+    <div class="board" id="board"></div>
+    <div class="word-bar">
+      <input class="word-typed" id="word-typed" placeholder="type or drag tiles&hellip;"
+        autocomplete="off" autocorrect="off" autocapitalize="characters"
+        spellcheck="false" maxlength="20"
+        oninput="onTypedInput()" onkeydown="onTypedKey(event)"/>
+      <div class="word-count" id="word-count"></div>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <div class="action-row">
+      <button class="btn" onclick="clearWord()">Clear</button>
+      <button class="btn primary" onclick="submitWord()">Submit</button>
+    </div>
+    <div class="found-title">Words Found</div>
+    <div class="words-grid" id="words-grid"></div>
+  </div>
+
+  <!-- RESULTS -->
+  <div id="screen-results" class="hidden">
+    <div class="results-title">Time&rsquo;s Up</div>
+    <div class="results-sub">Unique words score double &nbsp;&#10022;</div>
+    <div id="podium"></div>
+    <button class="btn primary mt14" onclick="backToLobby()">Play Again</button>
+  </div>
+
+</div>
+<script>
+'use strict';
+
+// ── DICTIONARY (loaded async from CSW21 on GitHub) ──────────────────────────
+let DICT = new Set();
+
+async function loadDictionary() {
+  const bar = document.getElementById('load-bar');
+  const msg = document.getElementById('load-msg');
+
+  // CSW21 = Collins Scrabble Words 2021, the official British English word list
+  // ~279,000 words, one per line, uppercase
+  const PRIMARY   = 'https://raw.githubusercontent.com/scrabblewords/scrabblewords/main/British/CSW21.txt';
+  // Fallback: dwyl/english-words — broader but not exclusively British
+  const FALLBACK  = 'https://raw.githubusercontent.com/dwyl/english-words/master/words_alpha.txt';
+
+  const tryFetch = async (url) => {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.text();
+  };
+
+  let text = null;
+  let source = 'CSW21';
+
+  try {
+    msg.textContent = 'Fetching dictionary\u2026';
+    bar.style.width = '20%';
+    text = await tryFetch(PRIMARY);
+    bar.style.width = '60%';
+  } catch {
+    try {
+      msg.textContent = 'Trying fallback\u2026';
+      text = await tryFetch(FALLBACK);
+      source = 'fallback';
+      bar.style.width = '60%';
+    } catch {
+      msg.textContent = 'Dictionary load failed \u2014 please check your connection and refresh.';
+      bar.style.background = 'var(--red)';
+      return false;
+    }
+  }
+
+  msg.textContent = 'Parsing words\u2026';
+  bar.style.width = '80%';
+
+  const lines = text.split('\n');
+  DICT = new Set();
+  for (const line of lines) {
+    // CSW21: "WORD [definition]"  — take first token, lowercase
+    const w = line.trim().split(/[\s\t]/)[0].toLowerCase();
+    if (w.length >= 5 && /^[a-z]+$/.test(w)) DICT.add(w);
+  }
+
+  bar.style.width = '100%';
+  msg.textContent = DICT.size.toLocaleString() + ' words loaded (' + source + ')';
+  await sleep(400);
+  return true;
+}
+
+// ── DICE ────────────────────────────────────────────────────────────────────
+const DICE=[
+  ['A','A','E','E','G','N'],['A','B','B','J','O','O'],['A','C','H','O','P','S'],['A','F','F','K','P','S'],
+  ['A','O','O','T','T','W'],['C','I','M','O','T','U'],['D','E','I','L','R','X'],['D','E','L','R','V','Y'],
+  ['D','I','S','T','T','Y'],['E','E','G','H','N','W'],['E','E','I','N','S','U'],['E','H','R','T','V','W'],
+  ['E','I','O','S','S','T'],['E','L','R','T','T','Y'],['H','I','M','N','U','Qu'],['H','L','N','N','R','Z']
+];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let myName='',myId='',roomCode='',isHost=false;
+let board=[],selected=[],typedMode=false;
+let words=[],score=0,gameOver=false;
+let timerIv=null,pollIv=null,scoreIv=null;
+const DURATION=600;
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const genId=()=>Math.random().toString(36).slice(2,10);
+const genCode=()=>{
+  const c='ABCDEFGHJKLMNPQRSTUVWXYZ';
+  return Array.from({length:4},()=>c[Math.floor(Math.random()*c.length)]).join('');
+};
+
+// ── SCREENS ──────────────────────────────────────────────────────────────────
+function showScreen(n){
+  ['loading','lobby','waiting','game','results'].forEach(s=>{
+    document.getElementById('screen-'+s).classList.toggle('hidden',s!==n);
+  });
+}
+
+// ── TOAST ────────────────────────────────────────────────────────────────────
+let _tt;
+function toast(msg,dur=2200){
+  const el=document.getElementById('toast');
+  el.textContent=msg;el.classList.add('show');
+  clearTimeout(_tt);_tt=setTimeout(()=>el.classList.remove('show'),dur);
+}
+
+// ── STORAGE ──────────────────────────────────────────────────────────────────
+async function rGet(k){
+  try{const r=await window.storage.get('bog:'+roomCode+':'+k,true);return r?JSON.parse(r.value):null;}
+  catch{return null;}
+}
+async function rSet(k,v){
+  try{await window.storage.set('bog:'+roomCode+':'+k,JSON.stringify(v),true);}catch{}
+}
+async function rDel(k){
+  try{await window.storage.delete('bog:'+roomCode+':'+k,true);}catch{}
+}
+
+// ── URL ──────────────────────────────────────────────────────────────────────
+function getRoomURL(){return new URLSearchParams(window.location.search).get('room')||'';}
+function setRoomURL(c){
+  const u=new URL(window.location.href);
+  if(c)u.searchParams.set('room',c);else u.searchParams.delete('room');
+  window.history.replaceState({},'',u.toString());
+}
+function shareLink(c){const u=new URL(window.location.href);u.searchParams.set('room',c);return u.toString();}
+
+// ── LOBBY ────────────────────────────────────────────────────────────────────
+async function createRoom(){
+  const name=document.getElementById('inp-name').value.trim();
+  if(!name){toast('Enter your name first');return;}
+  myName=name;myId=genId();isHost=true;roomCode=genCode();
+  setRoomURL(roomCode);
+  const players=[{id:myId,name:myName,host:true}];
+  await rSet('players',players);await rSet('state','waiting');
+  showWaiting(players);startPoll();
+}
+async function joinRoom(){
+  const name=document.getElementById('inp-name').value.trim();
+  const code=(document.getElementById('inp-code').value.trim()||getRoomURL()).toUpperCase();
+  if(!name){toast('Enter your name first');return;}
+  if(code.length!==4){toast('Enter a 4-letter room code');return;}
+  roomCode=code;myId=genId();myName=name;isHost=false;
+  const state=await rGet('state');
+  if(!state){toast('Room not found');return;}
+  if(state==='playing'){toast('Game already in progress');return;}
+  if(state==='done'){toast('Game has ended');return;}
+  const players=await rGet('players')||[];
+  if(players.find(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Name already taken');return;}
+  players.push({id:myId,name:myName,host:false});
+  await rSet('players',players);setRoomURL(roomCode);
+  showWaiting(players);startPoll();
+}
+
+// ── WAITING ──────────────────────────────────────────────────────────────────
+function showWaiting(players){
+  showScreen('waiting');
+  document.getElementById('disp-code').textContent=roomCode;
+  document.getElementById('share-inp').value=shareLink(roomCode);
+  renderPlayers(players);
+}
+function renderPlayers(players){
+  document.getElementById('players-list').innerHTML=players.map(p=>`
+    <div class="player-row">
+      <div class="pdot ${p.host?'host':''}"></div>
+      <div class="pname">${p.name}</div>
+      <div class="pbadge">${p.host?'host':'player'}</div>
+    </div>`).join('');
+  const btn=document.getElementById('btn-start');
+  if(isHost){
+    btn.style.display='block';
+    btn.textContent=players.length===1?'Start (solo)':'Start · '+players.length+' Players';
+  }else{btn.style.display='none';}
+  document.getElementById('wait-status').textContent=
+    isHost?'Share the link above, then press Start when ready.':'Waiting for host to start…';
+}
+function copyLink(){
+  const v=document.getElementById('share-inp').value;
+  if(navigator.clipboard){navigator.clipboard.writeText(v).then(()=>toast('Link copied!'));}
+  else{const i=document.getElementById('share-inp');i.select();document.execCommand('copy');toast('Link copied!');}
+}
+async function leaveRoom(){
+  stopPoll();
+  if(roomCode){
+    const pl=(await rGet('players')||[]).filter(p=>p.id!==myId);
+    await rSet('players',pl);
+    if(isHost&&pl.length===0)await rDel('state');
+  }
+  setRoomURL('');showScreen('lobby');
+}
+
+// ── POLLING ──────────────────────────────────────────────────────────────────
+function startPoll(){stopPoll();pollIv=setInterval(doPoll,1800);}
+function stopPoll(){clearInterval(pollIv);pollIv=null;}
+async function doPoll(){
+  const state=await rGet('state');if(!state)return;
+  if(state==='waiting'){const pl=await rGet('players')||[];renderPlayers(pl);}
+  else if(state==='playing'){const gd=await rGet('game');if(gd){stopPoll();enterGame(gd);}}
+}
+
+// ── GAME START ───────────────────────────────────────────────────────────────
+function rollBoard(){
+  return [...DICE].sort(()=>Math.random()-.5).map(d=>d[Math.floor(Math.random()*6)]);
+}
+async function startGame(){
+  board=rollBoard();
+  const gd={board,startTime:Date.now(),duration:DURATION};
+  await rSet('game',gd);await rSet('state','playing');
+  stopPoll();enterGame(gd);
+}
+function enterGame(gd){
+  board=gd.board;words=[];score=0;selected=[];typedMode=false;gameOver=false;
+  showScreen('game');renderBoard();updateWordBar();updateWordsGrid();
+  startTimer(gd);startScorePoll(gd);
+}
+
+// ── TIMER ────────────────────────────────────────────────────────────────────
+function startTimer(gd){
+  clearInterval(timerIv);
+  const el=document.getElementById('timer');
+  function tick(){
+    const rem=Math.max(0,gd.duration-(Date.now()-gd.startTime)/1000);
+    const m=Math.floor(rem/60),s=Math.floor(rem%60);
+    el.textContent=m+':'+(s<10?'0'+s:s);
+    el.classList.toggle('urgent',rem<=60);
+    if(rem<=0){clearInterval(timerIv);endGame();}
+  }
+  tick();timerIv=setInterval(tick,500);
+}
+
+// ── LIVE SCORES ──────────────────────────────────────────────────────────────
+function startScorePoll(gd){clearInterval(scoreIv);scoreIv=setInterval(()=>updateScores(gd),2500);}
+async function updateScores(gd){
+  if(gameOver){clearInterval(scoreIv);return;}
+  if((Date.now()-gd.startTime)/1000>=gd.duration)return;
+  const players=await rGet('players')||[];
+  const strip=document.getElementById('score-strip');
+  const cards=[];
+  for(const p of players){
+    const ws=await rGet('words:'+p.id)||[];
+    const s=ws.reduce((a,w)=>a+scoreWord(w),0);
+    const me=p.id===myId;
+    cards.push('<div class="score-card '+(me?'me':'')+'"><div class="sc-name">'+(me?'You':p.name)+'</div><div class="sc-val">'+(me?score:s)+'</div></div>');
+  }
+  strip.innerHTML=cards.join('');
+}
+
+// ── BOARD ────────────────────────────────────────────────────────────────────
+function renderBoard(){
+  const el=document.getElementById('board');
+  el.innerHTML=board.map((letter,i)=>{
+    const isQu=letter==='Qu';
+    return '<div class="tile" id="tile-'+i+'" data-idx="'+i+'">'+(isQu?'Q<span class="qu-note">u</span>':letter)+'</div>';
+  }).join('');
+  el.addEventListener('pointerdown',onPtrDown,{passive:false});
+  el.addEventListener('pointermove',onPtrMove,{passive:false});
+  el.addEventListener('pointerup',onPtrUp);
+  el.addEventListener('pointercancel',onPtrUp);
+}
+
+// ── DRAG ─────────────────────────────────────────────────────────────────────
+let dragging=false;
+function tileAt(x,y){
+  const el=document.elementFromPoint(x,y);if(!el)return null;
+  const t=el.closest('.tile');return t?+t.dataset.idx:null;
+}
+function onPtrDown(e){
+  e.preventDefault();
+  const idx=tileAt(e.clientX,e.clientY);if(idx==null)return;
+  dragging=true;typedMode=false;
+  document.getElementById('word-typed').value='';
+  clearSel();selectTile(idx);
+  document.getElementById('board').setPointerCapture(e.pointerId);
+}
+function onPtrMove(e){
+  if(!dragging)return;e.preventDefault();
+  const idx=tileAt(e.clientX,e.clientY);if(idx!=null)selectTile(idx);
+}
+function onPtrUp(){dragging=false;}
+
+function selectTile(idx){
+  if(gameOver)return;
+  if(selected.length>=2&&selected[selected.length-2]===idx){selected.pop();buildWord();refreshTiles();return;}
+  if(selected.includes(idx))return;
+  if(selected.length>0&&!adj(selected[selected.length-1],idx))return;
+  selected.push(idx);buildWord();refreshTiles();
+}
+function adj(a,b){
+  return Math.abs(Math.floor(a/4)-Math.floor(b/4))<=1&&Math.abs(a%4-b%4)<=1&&a!==b;
+}
+function buildWord(){
+  const w=selected.map(i=>board[i]==='Qu'?'QU':board[i]).join('');
+  document.getElementById('word-typed').value=w;updateWordBar();
+}
+function clearSel(){selected=[];refreshTiles();}
+function refreshTiles(){
+  board.forEach((_,i)=>{
+    const el=document.getElementById('tile-'+i);if(!el)return;
+    el.classList.remove('selected','path-dot');
+    if(selected.includes(i)){
+      el.classList.add('selected');
+      if(i!==selected[selected.length-1])el.classList.add('path-dot');
+    }
+  });
+}
+
+// ── TYPED INPUT ──────────────────────────────────────────────────────────────
+function onTypedInput(){typedMode=true;clearSel();updateWordBar();}
+function onTypedKey(e){
+  if(e.key==='Enter'){e.preventDefault();submitWord();}
+  if(e.key==='Escape'){e.preventDefault();clearWord();}
+}
+function updateWordBar(){
+  const v=document.getElementById('word-typed').value.toUpperCase();
+  document.getElementById('word-count').textContent=v.length?v.length+'L':'';
+  clearFb();
+}
+function clearFb(){const el=document.getElementById('feedback');el.textContent='';el.className='feedback';}
+
+// ── SCORING ──────────────────────────────────────────────────────────────────
+function scoreWord(w){
+  const l=w.length;
+  if(l<5)return 0;if(l===5)return 2;if(l===6)return 3;if(l===7)return 5;return 11;
+}
+
+// ── VALIDITY ─────────────────────────────────────────────────────────────────
+function isTrivialPlural(w){
+  if(w.length!==5||!w.endsWith('s'))return false;
+  return DICT.has(w.slice(0,4));
+}
+function onBoard(word){
+  const upper=word.toUpperCase().replace(/QU/g,'Qu');
+  const letters=[];let i=0;
+  while(i<upper.length){
+    if(upper.slice(i,i+2)==='Qu'){letters.push('Qu');i+=2;}
+    else{letters.push(upper[i]);i++;}
+  }
+  return dfs(letters,0,-1,new Set());
+}
+function dfs(letters,pos,prev,used){
+  if(pos===letters.length)return true;
+  const need=letters[pos];
+  for(let i=0;i<16;i++){
+    if(used.has(i)||board[i]!==need)continue;
+    if(prev!==-1&&!adj(prev,i))continue;
+    used.add(i);if(dfs(letters,pos+1,i,used))return true;used.delete(i);
+  }
+  return false;
+}
+
+// ── SUBMIT ───────────────────────────────────────────────────────────────────
+async function submitWord(){
+  if(gameOver)return;
+  const raw=document.getElementById('word-typed').value.trim().toUpperCase();
+  const w=raw.toLowerCase();
+  const fb=document.getElementById('feedback');
+  if(w.length<5){fb.textContent='Minimum 5 letters';fb.className='feedback err';return;}
+  if(words.find(x=>x.toLowerCase()===w)){fb.textContent='Already found';fb.className='feedback err';clearWord();return;}
+  if(!DICT.has(w)){fb.textContent='Not in dictionary';fb.className='feedback err';clearWord();return;}
+  if(isTrivialPlural(w)){fb.textContent='Trivial plural — invalid';fb.className='feedback err';clearWord();return;}
+  if(typedMode&&!onBoard(raw)){fb.textContent='Cannot be traced on this board';fb.className='feedback err';clearWord();return;}
+  const pts=scoreWord(w);
+  words.push(raw);score+=pts;
+  fb.textContent='+'+pts+' pt'+(pts!==1?'s':'');fb.className='feedback ok';
+  await rSet('words:'+myId,words);
+  updateWordsGrid();clearWord();
+}
+function clearWord(){
+  selected=[];typedMode=false;
+  document.getElementById('word-typed').value='';
+  document.getElementById('word-typed').focus();
+  refreshTiles();updateWordBar();
+}
+function updateWordsGrid(){
+  const g=document.getElementById('words-grid');
+  const sorted=[...words].sort((a,b)=>b.length-a.length||a.localeCompare(b));
+  g.innerHTML=sorted.map(w=>{
+    const pts=scoreWord(w);
+    return '<div class="chip '+(pts>=5?'big':'')+'">'+(w.toLowerCase())+'</div>';
+  }).join('');
+}
+
+// ── END GAME ─────────────────────────────────────────────────────────────────
+async function endGame(){
+  if(gameOver)return;gameOver=true;
+  clearInterval(timerIv);clearInterval(scoreIv);
+  await rSet('state','done');await rSet('words:'+myId,words);
+  setTimeout(showResults,2800);
+}
+async function showResults(){
+  const players=await rGet('players')||[];
+  const allWords={};
+  for(const p of players)allWords[p.id]=(await rGet('words:'+p.id)||[]).map(w=>w.toLowerCase());
+  const wCount={};
+  for(const ws of Object.values(allWords))for(const w of ws)wCount[w]=(wCount[w]||0)+1;
+  const results=players.map(p=>{
+    const ws=allWords[p.id]||[];
+    const s=ws.reduce((a,w)=>a+scoreWord(w)*(wCount[w]===1?2:1),0);
+    return{name:p.name,score:s,wordCount:ws.length,isMe:p.id===myId};
+  }).sort((a,b)=>b.score-a.score);
+  document.getElementById('podium').innerHTML=results.map((r,i)=>`
+    <div class="podium-row ${i===0?'first':''}">
+      <div class="pr-rank">${i+1}</div>
+      <div class="pr-info">
+        <div class="pr-name">${r.name}${r.isMe?' <span style="font-size:9px;opacity:.5;font-weight:400">you</span>':''}</div>
+        <div class="pr-words">${r.wordCount} word${r.wordCount!==1?'s':''}</div>
+      </div>
+      <div class="pr-score">${r.score}</div>
+    </div>`).join('');
+  showScreen('results');
+}
+async function backToLobby(){
+  clearInterval(timerIv);clearInterval(scoreIv);stopPoll();
+  const players=await rGet('players')||[];
+  await rDel('state');await rDel('game');
+  for(const p of players)await rDel('words:'+p.id);
+  setRoomURL('');showScreen('lobby');
+}
+
+// ── INIT ────────────────────────────────────────────────────────────────────────────────
+(async()=>{
+  const ok = await loadDictionary();
+  if (!ok) return;
+
+  showScreen('lobby');
+
+  // Pre-fill room code from URL so shared links drop straight to join
+  const codeFromURL = getRoomURL();
+  if (codeFromURL && codeFromURL.length === 4) {
+    document.getElementById('inp-code').value = codeFromURL.toUpperCase();
+    toast('Room code filled — enter your name and join!', 3500);
+  }
+  setTimeout(() => document.getElementById('inp-name')?.focus(), 100);
+})();
+</script>
+</body>
+</html>
