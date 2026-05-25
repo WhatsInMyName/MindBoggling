@@ -271,7 +271,7 @@ async function loadDictionary() {
     const first = line[0];
     if (!first || first === '#' || first !== first.toUpperCase() || first === first.toLowerCase()) continue;
     const w = line.split(' ')[0].toLowerCase();
-    if (w.length >= 5 && /^[a-z]+$/.test(w)) DICT.add(w);
+    if (w.length >= 4 && /^[a-z]+$/.test(w)) DICT.add(w);
   }
   bar.style.width = '100%';
   msg.textContent = DICT.size.toLocaleString() + ' words loaded (' + source + ')';
