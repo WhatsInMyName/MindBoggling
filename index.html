@@ -241,8 +241,12 @@ async function loadDictionary() {
   }
   msg.textContent = 'Parsing\u2026';
   bar.style.width = '85%';
+  // CSW21 format: entries start with an uppercase word, definitions may wrap to next lines.
+  // Only grab lines that start with an uppercase letter — those are word entries.
   for (const line of text.split('\n')) {
-    const w = line.trim().split(/[\s\t]/)[0].toLowerCase();
+    const first = line[0];
+    if (!first || first === '#' || first !== first.toUpperCase() || first === first.toLowerCase()) continue;
+    const w = line.split(' ')[0].toLowerCase();
     if (w.length >= 5 && /^[a-z]+$/.test(w)) DICT.add(w);
   }
   bar.style.width = '100%';
