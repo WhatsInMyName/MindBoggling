@@ -4,21 +4,22 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>Mindbogglingly PQ</title>
-<link href="https://fonts.googleapis.com/css2?family=Sirin+Stencil&family=Josefin+Sans:ital,wght@0,100;0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Sirin+Stencil&family=Righteous&family=Josefin+Sans:ital,wght@0,100;0,300;0,400;0,600;0,700;1,300&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0C5439;--surface:#0e6344;--surface2:#10714e;
-  --border:#0e7a52;--border2:#109060;
+  --bg:#385b4f;--surface:rgba(20,12,8,0.72);--surface2:rgba(20,12,8,0.82);
+  --border:rgba(200,150,100,0.4);--border2:rgba(200,150,100,0.55);
   --text:#FDD2D4;--muted:#a07880;
   --gold:#C25B79;--gold2:#d96e8a;
   --red:#c0392b;--green:#2ecc71;
-  --tile-bg:#0a4a32;--tile-sel:#C25B79;--tile-sel-text:#0C5439;
+  --tile-bg:rgba(160,100,60,0.35);--tile-sel:rgba(232,112,74,0.85);--tile-sel-text:#fff;
 }
 html,body{height:100%;overflow:hidden}
 body{
   font-family:'Josefin Sans',sans-serif;
-  background:var(--bg);color:var(--text);
+  background:var(--bg) url('./background.png') center center / cover no-repeat fixed;
+  color:var(--text);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:12px;
 }
@@ -28,7 +29,8 @@ body::after{
   pointer-events:none;z-index:0;opacity:0.25;
 }
 .wrap{position:relative;z-index:1;width:100%;max-width:440px;display:flex;flex-direction:column}
-.logo{font-family:'Sirin Stencil',serif;font-size:clamp(22px,6.5vw,38px);letter-spacing:.1em;color:var(--gold);text-align:center;line-height:1;text-shadow:0 0 40px rgba(194,91,121,.35)}
+.logo{font-family:'Sirin Stencil',serif;font-size:clamp(22px,6.5vw,38px);letter-spacing:.05em;color:var(--gold);text-align:center;line-height:1;text-shadow:none}
+.logo-boggl{font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;font-size:1.1em;letter-spacing:.05em}
 .logo-sub{font-family:'Josefin Sans',sans-serif;font-weight:100;font-size:10px;letter-spacing:.5em;color:var(--muted);text-align:center;margin-top:6px;text-transform:uppercase}
 #screen-loading{text-align:center}
 .load-bar-wrap{width:200px;height:2px;background:var(--border);margin:24px auto 12px;overflow:hidden}
@@ -77,7 +79,7 @@ body::after{
 .sc-val{font-family:'Sirin Stencil',serif;font-size:20px;color:var(--text)}
 .score-card.me .sc-val{color:var(--gold)}
 .board{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;user-select:none;touch-action:none;flex-shrink:0}
-.tile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'Josefin Sans',sans-serif;font-size:clamp(19px,6vw,28px);font-weight:600;letter-spacing:.05em;background:var(--tile-bg);border:1px solid var(--border2);cursor:pointer;transition:background .1s,border-color .1s,transform .08s,box-shadow .1s,color .1s;position:relative;-webkit-tap-highlight-color:transparent;text-transform:uppercase}
+.tile{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:'Righteous',sans-serif;font-size:clamp(19px,6vw,28px);letter-spacing:.05em;background:var(--tile-bg);border:1px solid var(--border2);cursor:pointer;transition:background .1s,border-color .1s,transform .08s,box-shadow .1s,color .1s;position:relative;-webkit-tap-highlight-color:transparent;text-transform:uppercase}
 .tile.selected{background:var(--tile-sel);border-color:var(--tile-sel);color:var(--tile-sel-text);transform:scale(.93);font-weight:700;box-shadow:0 0 14px rgba(201,168,76,.45)}
 .tile.path-dot::after{content:'';position:absolute;bottom:5px;right:5px;width:5px;height:5px;border-radius:50%;background:rgba(0,0,0,.35)}
 .tile .qu-note{position:absolute;bottom:3px;right:4px;font-size:.38em;letter-spacing:0;opacity:.5;font-weight:400}
@@ -135,7 +137,7 @@ body::after{
 
   <!-- LOBBY -->
   <div id="screen-lobby" class="hidden">
-    <div class="logo">Mindbogglingly PQ</div>
+    <div class="logo"><span style="color:#fff">mind</span><span class="logo-boggl">BOGGL</span><span style="color:#fff">ing</span></div>
     <div class="logo-sub">Multiplayer &middot; British English</div>
     <div class="lobby-form">
       <div class="field-group">
@@ -179,7 +181,7 @@ body::after{
   <!-- GAME -->
   <div id="screen-game" class="hidden">
     <div class="game-header">
-      <div class="game-logo">Mindbogglingly PQ</div>
+      <div class="game-logo"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span style="font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
       <div class="timer" id="timer">10:00</div>
     </div>
     <div class="score-strip" id="score-strip"></div>
