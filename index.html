@@ -18,7 +18,7 @@
 html,body{height:100%;overflow:hidden}
 body{
   font-family:'Josefin Sans',sans-serif;
-  background:var(--bg) url('./background.png') center center / cover no-repeat fixed;
+  background:url('./background-1.png') center center / cover no-repeat fixed;
   color:#ffffff;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:12px;
@@ -129,7 +129,7 @@ body::after{
 
   <!-- LOADING -->
   <div id="screen-loading">
-    <div class="logo">Mindbogglingly PQ</div>
+    <div class="logo"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span style="font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
     <div class="logo-sub">Multiplayer &middot; British English</div>
     <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
     <div class="load-msg" id="load-msg">Loading dictionary&hellip;</div>
@@ -157,7 +157,7 @@ body::after{
 
   <!-- WAITING -->
   <div id="screen-waiting" class="hidden">
-    <div class="logo" style="font-size:34px">Mindbogglingly PQ</div>
+    <div class="logo" style="font-size:clamp(20px,5.5vw,32px)"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span style="font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
     <div class="room-code-box"><div class="room-code-val" id="disp-code">----</div></div>
     <div class="share-row">
       <input class="share-inp" id="share-inp" readonly/>
