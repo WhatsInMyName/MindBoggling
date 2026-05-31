@@ -16,13 +16,22 @@
   --tile-bg:rgba(160,100,60,0.35);--tile-sel:rgba(232,112,74,0.85);--tile-sel-text:#fff;
 }
 html,body{height:100%;overflow:hidden}
+html{background:#1a1008}
 body{
   font-family:'Josefin Sans',sans-serif;
-  background:url('./background-1.png') center center / cover no-repeat fixed;
+  background:#1a1008;
   color:#ffffff;
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   padding:12px;
+  transition:background-image 0.4s ease;
 }
+/* Per-screen backgrounds */
+body.bg-home    { background:url('./bg-home.png')    center center / cover no-repeat fixed, #1a1008; }
+body.bg-create  { background:url('./bg-create.png')  center center / cover no-repeat fixed, #1a1008; }
+body.bg-share   { background:url('./bg-share.png')   center center / cover no-repeat fixed, #1a1008; }
+body.bg-join    { background:url('./bg-join.png')    center center / cover no-repeat fixed, #1a1008; }
+body.bg-waiting { background:url('./bg-waiting.png') center center / cover no-repeat fixed, #1a1008; }
+body.bg-board   { background:url('./bg-board.png')   center center / cover no-repeat fixed, #1a1008; }
 body::after{
   content:'';position:fixed;inset:0;
   background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
@@ -314,29 +323,48 @@ body.theme-c .join-standard {
 </style>
 </head>
 <body>
+<script>
+// Apply theme synchronously before any rendering — prevents white flash
+(function() {
+  var themes = ['theme-a', 'theme-b', 'theme-c'];
+  var t = themes[Math.floor(Math.random() * themes.length)];
+  document.body.classList.add(t);
+  document.body.classList.add('bg-home');
+  window.__INITIAL_THEME__ = t;
+})();
+</script>
 <div class="toast" id="toast"></div>
 <div class="wrap">
 
   <!-- LOADING -->
   <div id="screen-loading">
-    <div class="logo"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span style="font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
-    <div class="logo-sub">Multiplayer &middot; British English</div>
+    <!-- Theme A/C loading logo -->
+    <div class="logo loading-logo-ac">
+      <span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span style="font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span>
+    </div>
+    <!-- Theme B loading logo -->
+    <div class="logo loading-logo-b" style="display:none;line-height:1.3;text-align:left">
+      <span style="color:#00ff41;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">mind</span>
+      <div class="boggl-arcade"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div>
+      <span style="color:#ff4444;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">ed</span>
+    </div>
+    <div class="logo-sub" id="loading-sub">british english multiplayer word game</div>
     <div class="load-bar-wrap"><div class="load-bar" id="load-bar"></div></div>
     <div class="load-msg" id="load-msg">Loading dictionary&hellip;</div>
   </div>
 
-  <!-- LOBBY -->
+  <!-- LOBBY: HOME STEP -->
   <div id="screen-lobby" class="hidden">
 
-    <!-- LOGO AREA — theme-specific -->
+    <!-- Logo (theme-specific) -->
     <div id="lobby-logo-wrap" style="margin-bottom:6px">
       <div class="logo theme-a-logo">
         <span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span class="logo-boggl">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span>
       </div>
       <div class="logo theme-b-logo" style="display:none;line-height:1.3;text-align:left">
-        <span style="color:#00ff41;font-family:'Press Start 2P',monospace;font-size:clamp(16px,4.5vw,22px)">mind</span>
+        <span style="color:#00ff41;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">mind</span>
         <div class="boggl-arcade"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div>
-        <span style="color:#ff4444;font-family:'Press Start 2P',monospace;font-size:clamp(16px,4.5vw,22px)">ed</span>
+        <span style="color:#ff4444;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">ed</span>
       </div>
       <div class="logo theme-c-logo" style="display:none;line-height:1;overflow:visible;padding-top:20px">
         <span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">mind</span><div class="boggl-explode"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div><span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">ing</span>
@@ -344,58 +372,106 @@ body.theme-c .join-standard {
     </div>
     <div class="logo-sub" id="lobby-sub">british english multiplayer word game</div>
 
-    <!-- NAME INPUT — all themes -->
+    <!-- NAME INPUT -->
     <div style="margin-top:20px">
-      <input class="field-input" id="inp-name" placeholder="enter your name" maxlength="16" autocomplete="off" style="text-align:center;font-size:16px;font-style:italic"/>
+      <input class="field-input" id="inp-name" placeholder="enter your name"
+        maxlength="16" autocomplete="off" style="text-align:center;font-size:16px;font-style:italic"/>
     </div>
 
-    <!-- STANDARD LAYOUT (Theme A & B) -->
+    <!-- Standard layout (Theme A & B) -->
     <div class="lobby-standard" style="flex-direction:column;gap:10px;margin-top:14px">
       <div style="display:flex;gap:10px">
-        <button class="btn primary" style="flex:1" onclick="createRoom()">Create New</button>
-        <button class="btn primary" style="flex:1" onclick="joinRoom()">Join Existing</button>
-      </div>
-      <div style="display:flex;gap:10px">
-        <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-          <div class="field-label">Game Length (mins)</div>
-          <input class="field-input" id="inp-duration" type="number" min="1" max="59" value="10"
-            style="width:100%;text-align:center;font-size:16px"/>
-        </div>
-        <div style="flex:1;display:flex;flex-direction:column;gap:4px">
-          <div class="field-label">Room Code</div>
-          <input class="field-input code-input" id="inp-code" placeholder="XXXX" maxlength="4"
-            autocomplete="off" style="width:100%;text-align:center;font-size:20px"
-            oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"/>
-        </div>
+        <button class="btn primary" style="flex:1" onclick="goCreate()">Create New</button>
+        <button class="btn primary" style="flex:1" onclick="goJoin()">Join Existing</button>
       </div>
     </div>
 
-    <!-- POETIC LAYOUT (Theme C only) -->
+    <!-- Poetic layout (Theme C) -->
     <div class="lobby-prose" style="flex-direction:column;gap:14px;margin-top:20px;align-items:center">
       <p class="prose-line">you whom we shall call <span class="hl">[your name]</span></p>
       <p class="prose-line">by any other name would be just as BOGGLed</p>
-      <input class="field-input" id="inp-duration-c" type="number" min="1" max="59" value="10"
-        placeholder="how many minutes?" style="width:100%;text-align:center;border-radius:8px;font-size:15px"
-        oninput="document.getElementById('inp-duration').value=this.value"/>
-      <button class="btn primary" style="max-width:300px;border-radius:50px" onclick="createRoom()">Create New Game</button>
-      <div style="height:1px;width:50%;background:rgba(255,255,255,0.12);margin:2px 0"></div>
-      <div class="join-prose-block">
-        <p>16 letters of a batch to dispatch the scratch</p>
-        <p>enter the <span class="hl">[room code]</span> to join a match</p>
-        <p>that exists, and make the lexicon twist, persist</p>
-        <p>to leave your mark at the top of the list</p>
-      </div>
-      <input class="field-input code-input" id="inp-code-c" placeholder="room code" maxlength="4"
-        autocomplete="off" style="width:100%;text-align:center;border-radius:8px;font-size:22px"
-        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'');document.getElementById('inp-code').value=this.value"/>
-      <button class="btn primary" style="max-width:300px;border-radius:50px" onclick="joinRoom()">Take Me There</button>
+      <button class="btn primary" style="max-width:300px;border-radius:50px" onclick="goCreate()">Create New Game</button>
+      <button class="btn primary" style="max-width:300px;border-radius:50px" onclick="goJoin()">Join Existing</button>
     </div>
+  </div>
 
+  <!-- LOBBY: CREATE STEP (bg-create) -->
+  <div id="screen-create" class="hidden">
+    <div class="logo theme-a-logo"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span class="logo-boggl">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
+    <div class="logo theme-b-logo" style="display:none;line-height:1.3">
+      <span style="color:#00ff41;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">mind</span>
+      <div class="boggl-arcade"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div>
+      <span style="color:#ff4444;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">ed</span>
+    </div>
+    <div class="logo theme-c-logo" style="display:none;overflow:visible;padding-top:20px">
+      <span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">mind</span><div class="boggl-explode"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div><span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">ing</span>
+    </div>
+    <div class="logo-sub">british english multiplayer word game</div>
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div class="field-label" style="font-size:18px;letter-spacing:.15em;white-space:nowrap">GAME DURATION</div>
+        <div style="display:flex;align-items:center;gap:6px;flex:1">
+          <input class="field-input" id="inp-duration" type="number" min="1" max="59"
+            placeholder="__" style="width:80px;text-align:center;font-size:22px;font-weight:700"/>
+          <span style="color:rgba(255,255,255,0.6);font-size:14px;letter-spacing:.2em">mins</span>
+        </div>
+      </div>
+      <button class="btn primary" onclick="createRoom()">Start Creating</button>
+      <button class="btn" onclick="backToHome()">&#8592; Back</button>
+    </div>
+  </div>
+
+  <!-- LOBBY: SHARE STEP (bg-share) — shown after room is created -->
+  <div id="screen-share" class="hidden">
+    <div class="logo theme-a-logo"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span class="logo-boggl">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
+    <div class="logo theme-b-logo" style="display:none;line-height:1.3">
+      <span style="color:#00ff41;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">mind</span>
+      <div class="boggl-arcade"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div>
+      <span style="color:#ff4444;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">ed</span>
+    </div>
+    <div class="logo theme-c-logo" style="display:none;overflow:visible;padding-top:20px">
+      <span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">mind</span><div class="boggl-explode"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div><span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">ing</span>
+    </div>
+    <div class="logo-sub">british english multiplayer word game</div>
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="share-inp" id="share-code-el" style="flex:1;padding:12px 14px;font-size:18px;letter-spacing:.2em"></div>
+        <button class="btn primary" style="width:auto;white-space:nowrap;padding:12px 16px" onclick="copyCode()">Copy Code</button>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="share-inp" id="share-link-el" style="flex:1;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;padding:12px 14px"></div>
+        <button class="btn primary" style="width:auto;white-space:nowrap;padding:12px 16px" onclick="copyLink()">Copy Link</button>
+      </div>
+      <p class="status-note" style="text-align:center">share the room code or link with your friends</p>
+      <button class="btn primary" style="margin-top:6px" onclick="goToWaiting()">Continue to Waiting Room &#8594;</button>
+    </div>
+  </div>
+
+  <!-- LOBBY: JOIN STEP (bg-join) -->
+  <div id="screen-join" class="hidden">
+    <div class="logo theme-a-logo"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span class="logo-boggl">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
+    <div class="logo theme-b-logo" style="display:none;line-height:1.3">
+      <span style="color:#00ff41;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">mind</span>
+      <div class="boggl-arcade"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div>
+      <span style="color:#ff4444;font-family:'Press Start 2P',monospace;font-size:clamp(13px,3.5vw,18px)">ed</span>
+    </div>
+    <div class="logo theme-c-logo" style="display:none;overflow:visible;padding-top:20px">
+      <span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">mind</span><div class="boggl-explode"><span>B</span><span>O</span><span>G</span><span>G</span><span>L</span></div><span style="color:#fff;font-family:'Sirin Stencil',serif;font-size:clamp(22px,6vw,34px)">ing</span>
+    </div>
+    <div class="logo-sub">british english multiplayer word game</div>
+    <div style="margin-top:24px;display:flex;flex-direction:column;gap:12px">
+      <input class="field-input code-input" id="inp-code" placeholder="enter room code (4 digits)"
+        maxlength="4" autocomplete="off"
+        style="text-align:center;font-size:28px;letter-spacing:.35em;font-style:italic"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z]/g,'')"/>
+      <button class="btn primary" onclick="joinRoom()">Join Game</button>
+      <button class="btn" onclick="backToHome()">&#8592; Back</button>
+    </div>
   </div>
 
   <!-- WAITING -->
   <div id="screen-waiting" class="hidden">
-    <div class="logo" style="font-size:clamp(20px,5.5vw,32px)"><span style="color:#fff;font-family:'Sirin Stencil',serif">mind</span><span style="font-family:'Righteous',sans-serif;background:linear-gradient(90deg,#9B59B6,#E8704A);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">BOGGL</span><span style="color:#fff;font-family:'Sirin Stencil',serif">ing</span></div>
+
     <div class="room-code-box"><div class="room-code-val" id="disp-code">----</div></div>
     <div class="share-row">
       <input class="share-inp" id="share-inp" readonly/>
@@ -531,6 +607,14 @@ async function loadDictionary() {
 }
 
 
+
+// ── BACKGROUND SWITCHER ──────────────────────────────────────────────────────
+const BG_CLASSES = ['bg-home','bg-create','bg-share','bg-join','bg-waiting','bg-board'];
+function setBg(name) {
+  document.body.classList.remove(...BG_CLASSES);
+  if (name) document.body.classList.add('bg-' + name);
+}
+
 // ── THEME SYSTEM ─────────────────────────────────────────────────────────────
 const THEMES = ['theme-a', 'theme-b', 'theme-c'];
 
@@ -538,7 +622,7 @@ function applyTheme(theme) {
   document.body.classList.remove(...THEMES);
   document.body.classList.add(theme);
 
-  // Show/hide logo variants
+  // Show/hide lobby logo variants
   const logos = {
     'theme-a': '.theme-a-logo',
     'theme-b': '.theme-b-logo',
@@ -549,21 +633,31 @@ function applyTheme(theme) {
   const target = document.querySelector(logos[theme]);
   if (target) target.style.display = '';
 
-  // Sub-label style
-  const sub = document.getElementById('lobby-sub');
-  if (sub) {
+  // Show/hide loading screen logo variants
+  const acLogo = document.querySelector('.loading-logo-ac');
+  const bLogo  = document.querySelector('.loading-logo-b');
+  if (acLogo) acLogo.style.display = theme === 'theme-b' ? 'none' : '';
+  if (bLogo)  bLogo.style.display  = theme === 'theme-b' ? ''     : 'none';
+
+  // Sub-label styles (lobby + loading)
+  const subStyle = (el) => {
+    if (!el) return;
     if (theme === 'theme-b') {
-      sub.style.fontFamily = "'Press Start 2P', monospace";
-      sub.style.fontSize   = '7px';
-      sub.style.letterSpacing = '.1em';
-      sub.style.textTransform = 'uppercase';
+      el.style.fontFamily    = "'Press Start 2P', monospace";
+      el.style.fontSize      = '7px';
+      el.style.letterSpacing = '.1em';
+      el.style.textTransform = 'uppercase';
+      el.style.color         = '#00ff41';
     } else {
-      sub.style.fontFamily = "'Josefin Sans', sans-serif";
-      sub.style.fontSize   = '11px';
-      sub.style.letterSpacing = '.3em';
-      sub.style.textTransform = 'lowercase';
+      el.style.fontFamily    = "'Josefin Sans', sans-serif";
+      el.style.fontSize      = '11px';
+      el.style.letterSpacing = '.3em';
+      el.style.textTransform = 'lowercase';
+      el.style.color         = '';
     }
-  }
+  };
+  subStyle(document.getElementById('lobby-sub'));
+  subStyle(document.getElementById('loading-sub'));
 }
 
 function pickTheme() {
@@ -595,8 +689,17 @@ const genCode = () => {
 
 // ── SCREENS ──────────────────────────────────────────────────────────────────
 function showScreen(n) {
-  ['loading','lobby','waiting','game','results'].forEach(s =>
-    document.getElementById('screen-'+s).classList.toggle('hidden', s !== n));
+  ['loading','lobby','create','share','join','waiting','game','results'].forEach(s => {
+    const el = document.getElementById('screen-'+s);
+    if (el) el.classList.toggle('hidden', s !== n);
+  });
+  // Set background per screen
+  const bgMap = {
+    loading: 'home', lobby: 'home',
+    create: 'create', share: 'share', join: 'join',
+    waiting: 'waiting', game: 'board', results: 'board'
+  };
+  setBg(bgMap[n] || 'home');
 }
 
 // ── TOAST ────────────────────────────────────────────────────────────────────
@@ -643,6 +746,40 @@ function shareLink(c) {
   return u.toString();
 }
 
+
+// ── LOBBY NAVIGATION ─────────────────────────────────────────────────────────
+function backToHome() {
+  showScreen('lobby');
+}
+
+function goCreate() {
+  const name = document.getElementById('inp-name').value.trim();
+  if (!name) { toast('Enter your name first'); return; }
+  showScreen('create');
+}
+
+function goJoin() {
+  const name = document.getElementById('inp-name').value.trim();
+  if (!name) { toast('Enter your name first'); return; }
+  // Pre-fill code from URL if available
+  const codeFromURL = getRoomURL();
+  if (codeFromURL && codeFromURL.length === 4) {
+    document.getElementById('inp-code').value = codeFromURL.toUpperCase();
+  }
+  showScreen('join');
+}
+
+function goToWaiting() {
+  showScreen('waiting');
+  listenWaiting();
+}
+
+function copyCode() {
+  const code = document.getElementById('share-code-el').textContent;
+  navigator.clipboard ? navigator.clipboard.writeText(code).then(() => toast('Code copied!'))
+    : (toast('Code: ' + code));
+}
+
 // ── LOBBY ────────────────────────────────────────────────────────────────────
 async function createRoom() {
   const name = document.getElementById('inp-name').value.trim();
@@ -659,6 +796,7 @@ async function createRoom() {
   // Apply host's theme
   const roomTheme = await rGet('theme');
   if (roomTheme) applyTheme(roomTheme);
+  showScreen('waiting');
   showWaiting();
   listenWaiting();
 }
@@ -1259,12 +1397,13 @@ async function backToLobby() {
   if (isHost) await rRemove('');
   setRoomURL('');
   showScreen('lobby');
+  setBg('home');
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 (async () => {
-  // Pick and apply theme immediately — first thing anyone sees
-  const sessionTheme = pickTheme();
+  // Theme already applied synchronously — just ensure logo/UI is correct
+  const sessionTheme = window.__INITIAL_THEME__ || pickTheme();
   applyTheme(sessionTheme);
 
   const ok = await loadDictionary();
@@ -1291,6 +1430,11 @@ async function backToLobby() {
   window.onTypedInput   = onTypedInput;
   window.onTypedKey     = onTypedKey;
   window.leaveGame      = leaveGame;
+  window.goCreate       = goCreate;
+  window.goJoin         = goJoin;
+  window.goToWaiting    = goToWaiting;
+  window.backToHome     = backToHome;
+  window.copyCode       = copyCode;
   window.requestEndGame = requestEndGame;
   window.confirmEndGame = confirmEndGame;
   window.rejectEndGame  = rejectEndGame;
