@@ -52,39 +52,48 @@ body{
 .title{
   width:100%;
   text-align:center;
-  padding:34px 0 8px;
-  line-height:0.9;
+  padding:30px 0 8px;
+  line-height:0.85;
   white-space:nowrap;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
 }
 .title .mind,.title .ing{
   font-family:'Sirin Stencil',serif;
   color:#fff;
-  font-size:clamp(42px,13vw,64px);
+  font-size:clamp(26px,7.5vw,40px);
   vertical-align:middle;
+  flex-shrink:1;
 }
 .title .boggl{
   font-family:'Righteous',sans-serif;
-  font-size:clamp(56px,17vw,86px);
+  font-size:clamp(34px,10vw,52px);
+  color:#C25B79; /* solid fallback so it's NEVER invisible */
   background:var(--grad);
   -webkit-background-clip:text;background-clip:text;
   -webkit-text-fill-color:transparent;
-  display:inline-block;
+  display:inline-flex;
   vertical-align:middle;
+  flex-shrink:0;
+  margin:0 1px;
 }
 /* arched BOGGL — each letter rotated/offset */
 .title .boggl b{display:inline-block;font-weight:400}
-.title .boggl b:nth-child(1){transform:translateY(10px) rotate(-16deg)}
-.title .boggl b:nth-child(2){transform:translateY(-2px) rotate(-9deg)}
-.title .boggl b:nth-child(3){transform:translateY(-8px) rotate(-2deg)}
-.title .boggl b:nth-child(4){transform:translateY(-6px) rotate(6deg)}
-.title .boggl b:nth-child(5){transform:translateY(2px) rotate(13deg)}
+.title .boggl b:nth-child(1){transform:translateY(6px) rotate(-12deg)}
+.title .boggl b:nth-child(2){transform:translateY(-1px) rotate(-6deg)}
+.title .boggl b:nth-child(3){transform:translateY(-5px) rotate(-1deg)}
+.title .boggl b:nth-child(4){transform:translateY(-4px) rotate(5deg)}
+.title .boggl b:nth-child(5){transform:translateY(1px) rotate(10deg)}
 
 .subtitle{
-  font-size:clamp(15px,4.6vw,21px);
+  font-size:clamp(14px,4.2vw,19px);
   color:#fff;
   letter-spacing:.01em;
   margin-bottom:20px;
   text-align:center;
+  text-shadow:0 2px 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.9);
 }
 
 /* ── INPUTS ────────────────────────────────────────────────────────────────── */
@@ -171,8 +180,9 @@ input[type=number].field::-webkit-inner-spin-button{-webkit-appearance:none;marg
 .share-row .share-box{flex:1}
 .share-row .btn{width:auto;flex-shrink:0;font-size:13px;padding:14px 16px;white-space:nowrap}
 .share-note{
-  width:100%;text-align:center;color:var(--purple);
+  width:100%;text-align:center;color:#d98ab5;
   font-weight:700;font-size:15px;letter-spacing:.02em;margin-top:4px;
+  text-shadow:0 2px 8px rgba(0,0,0,0.95);
 }
 
 /* ── WAITING SCREEN ────────────────────────────────────────────────────────── */
@@ -181,7 +191,8 @@ input[type=number].field::-webkit-inner-spin-button{-webkit-appearance:none;marg
   display:flex;align-items:center;justify-content:space-between;gap:14px;
   font-family:'Josefin Sans',sans-serif;font-weight:700;
   font-size:clamp(22px,6vw,30px);letter-spacing:.06em;text-transform:uppercase;
-  color:rgba(255,255,255,0.92);margin:18px 0 12px;
+  color:#fff;margin:18px 0 12px;
+  text-shadow:0 2px 10px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.9);
 }
 .wait-dur-box{
   background:rgba(0,0,0,0.7);border-radius:10px;padding:10px 18px;
@@ -190,13 +201,13 @@ input[type=number].field::-webkit-inner-spin-button{-webkit-appearance:none;marg
 .players-list{width:100%;display:flex;flex-direction:column;gap:10px}
 .player-row{
   display:flex;align-items:center;gap:12px;
-  background:rgba(0,0,0,0.7);border-radius:10px;padding:15px 18px;
+  background:rgba(0,0,0,0.8);border-radius:10px;padding:15px 18px;
 }
 .pdot{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,0.3);flex-shrink:0}
 .pdot.host{background:var(--orange)}
-.pname{flex:1;font-size:17px;color:#fff}
-.pbadge{font-size:13px;letter-spacing:.18em;text-transform:lowercase;color:rgba(255,255,255,0.55)}
-.wait-btns{display:flex;gap:20px;width:100%;margin-top:auto;padding-top:26px}
+.pname{flex:1;font-size:18px;color:#fff;text-shadow:0 1px 6px rgba(0,0,0,0.9)}
+.pbadge{font-size:13px;letter-spacing:.18em;text-transform:lowercase;color:rgba(255,255,255,0.7);text-shadow:0 1px 6px rgba(0,0,0,0.9)}
+.wait-btns{display:flex;gap:20px;width:100%;margin-top:30px;padding-bottom:20px}
 .wait-btns .btn{flex:1}
 
 /* ── GAME / BOARD SCREEN ───────────────────────────────────────────────────── */
@@ -205,8 +216,9 @@ input[type=number].field::-webkit-inner-spin-button{-webkit-appearance:none;marg
   padding:14px 0 8px;
 }
 .game-logo{white-space:nowrap;line-height:0.9}
-.game-logo .mind,.game-logo .ing{font-family:'Sirin Stencil',serif;color:#fff;font-size:clamp(20px,6vw,28px);vertical-align:middle}
-.game-logo .boggl{font-family:'Righteous',sans-serif;font-size:clamp(26px,8vw,38px);background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;vertical-align:middle}
+.game-logo{display:flex;align-items:center}
+.game-logo .mind,.game-logo .ing{font-family:'Sirin Stencil',serif;color:#fff;font-size:clamp(16px,5vw,24px);vertical-align:middle}
+.game-logo .boggl{font-family:'Righteous',sans-serif;font-size:clamp(20px,6vw,32px);color:#C25B79;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;vertical-align:middle;display:inline-flex;margin:0 1px}
 .game-logo .boggl b{display:inline-block}
 .game-logo .boggl b:nth-child(1){transform:translateY(4px) rotate(-14deg)}
 .game-logo .boggl b:nth-child(2){transform:translateY(-1px) rotate(-7deg)}
@@ -318,6 +330,12 @@ input[type=number].field::-webkit-inner-spin-button{-webkit-appearance:none;marg
   max-width:90vw;overflow:hidden;text-overflow:ellipsis;
 }
 .toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Waiting screen compact spacing so Start button is visible without scrolling */
+#screen-waiting .title{padding:18px 0 4px}
+#screen-waiting .subtitle{margin-bottom:10px}
+#screen-waiting .wait-head{margin:12px 0 10px}
+#screen-waiting .wait-btns{margin-top:24px}
 </style>
 </head>
 <body>
@@ -397,7 +415,7 @@ input[type=number].field::-webkit-inner-spin-button{-webkit-appearance:none;marg
       <div class="players-list" id="players-list"></div>
     </div>
     <div class="wait-btns">
-      <button class="btn" id="btn-start" onclick="startGame()" style="display:none">Start</button>
+      <button class="btn" id="btn-start" onclick="startGame()" style="display:none">Start Game</button>
       <button class="btn ghost" onclick="leaveRoom()">Leave</button>
     </div>
   </div>
